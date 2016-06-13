@@ -125,58 +125,23 @@ def train_and_predict():
     
     imgs_train,imgs_valid,imgs_mask_train,imgs_mask_valid = train_test_split(imgs_train,imgs_mask_train,test_size=0.2,random_state=seed)
     
-    # horizontal flip train
-    imgs_train_flip = imgs_train[:,:,:,::-1]
-    imgs_mask_train_flip = imgs_mask_train
-    imgs_train = np.concatenate((imgs_train,imgs_train_flip),axis=0)
-    imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_train_flip),axis=0)
-    # vertical flip train
-    imgs_train_flip = imgs_train[:,:,::-1,:]
-    imgs_mask_train_flip = imgs_mask_train
-    imgs_train = np.concatenate((imgs_train,imgs_train_flip),axis=0)
-    imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_train_flip),axis=0)
-    
-    
-    print ("imgs_train: %s,imgs_valid:%s"%(imgs_train.shape,imgs_valid.shape))
-    print ("imgs_mask_train: %s,imgs_mask_valid:%s"%(imgs_mask_train.shape,imgs_mask_valid.shape))
-
-
     print('-'*30)
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\unet_15.hdf5', monitor='loss', save_best_only=True)
+    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\unet.hdf5', monitor='loss', save_best_only=True)
     
     print('-'*30)
     print('Fitting model...')
     print('-'*30)
-    
-    batch_size=128
-    nb_epoch=5
-
+    augmentation=True
+    batch_size=32
+    nb_epoch=20
     load_model=True
-    augmentation=False
-    use_all_data = True
+    
     if load_model:
         model.load_weights('E:\\UltrasoundNerve\\unet.hdf5')
     if not augmentation:
-
-        if use_all_data:
-            # horizontal flip valid
-            imgs_valid_flip = imgs_valid[:,:,:,::-1]
-            imgs_mask_valid_flip = imgs_mask_valid
-            imgs_valid = np.concatenate((imgs_valid,imgs_valid_flip),axis=0)
-            imgs_mask_valid = np.concatenate((imgs_mask_valid,imgs_mask_valid_flip),axis=0)
-
-            # vertical flip valid
-            imgs_valid_flip = imgs_valid[:,:,::-1,:]
-            imgs_mask_valid_flip = imgs_mask_valid
-            imgs_valid = np.concatenate((imgs_valid,imgs_valid_flip),axis=0)
-            imgs_mask_valid = np.concatenate((imgs_mask_valid,imgs_mask_valid_flip),axis=0)
-
-            imgs_train = np.concatenate((imgs_train,imgs_valid),axis=0)
-            imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_valid),axis=0)
-            
         model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
                   callbacks=[model_checkpoint],validation_data=[imgs_valid,imgs_mask_valid]
                   )
@@ -207,12 +172,12 @@ def train_and_predict():
     print('-'*30)
     print('Loading and preprocessing test data...')
     print('-'*30)
-    imgs_valid, imgs_id_test = load_test_data()
-    imgs_valid = preprocess(imgs_valid)
+    imgs_test, imgs_id_test = load_test_data()
+    imgs_test = preprocess(imgs_test)
 
-    imgs_valid = imgs_valid.astype('float32')
-    imgs_valid -= mean
-    imgs_valid /= std
+    imgs_test = imgs_test.astype('float32')
+    imgs_test -= mean
+    imgs_test /= std
 
     print('-'*30)
     print('Loading saved weights...')
@@ -222,7 +187,7 @@ def train_and_predict():
     print('-'*30)
     print('Predicting masks on test data...')
     print('-'*30)
-    imgs_mask_test = model.predict(imgs_valid, verbose=1)
+    imgs_mask_test = model.predict(imgs_test, verbose=1)
     np.save('imgs_mask_test.npy', imgs_mask_test)
 
 
