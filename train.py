@@ -1,5 +1,24 @@
 from __future__ import print_function
 
+
+'''
+seed = 1024,10 epoch
+seed = 1024+1,40 epoch
+
+datagen = ImageDataGenerator(
+            featurewise_center=False,  # set input mean to 0 over the dataset
+            samplewise_center=False,  # set each sample mean to 0
+            featurewise_std_normalization=False,  # divide inputs by std of the dataset
+            samplewise_std_normalization=False,  # divide each input by its std
+            zca_whitening=False,  # apply ZCA whitening
+            rotation_range=45,  # randomly rotate images in the range (degrees, 0 to 180)
+            width_shift_range=0.0,  # randomly shift images horizontally (fraction of total width)
+            height_shift_range=0.0, # randomly shift images vertically (fraction of total height)
+            horizontal_flip=True,  # randomly flip images
+            vertical_flip=False)
+
+
+'''
 import cv2
 import numpy as np
 from keras.models import Model
@@ -11,7 +30,7 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as K
 from sklearn.cross_validation import train_test_split
 from data import load_train_data, load_test_data
-seed = 1024
+seed = 1024+2
 np.random.seed(seed)
 
 img_rows = 64
@@ -129,15 +148,15 @@ def train_and_predict():
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\unet.hdf5', monitor='loss', save_best_only=True)
+    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\unet_seed_1026_epoch_50.hdf5', monitor='loss', save_best_only=True)
     
     print('-'*30)
     print('Fitting model...')
     print('-'*30)
     augmentation=True
     batch_size=32
-    nb_epoch=20
-    load_model=True
+    nb_epoch=50
+    load_model=False
     
     if load_model:
         model.load_weights('E:\\UltrasoundNerve\\unet.hdf5')
