@@ -186,7 +186,7 @@ def train_and_predict():
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_name = 'unet_seed_1024_epoch_30_no_aug_64_80_shiftbn_sgd.hdf5'
+    model_name = 'unet_seed_1024_epoch_30_no_aug_64_80_shiftbn_nadam.hdf5'
     model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='loss', save_best_only=True)
     plot(model, to_file='E:\\UltrasoundNerve\\%s.png'%model_name.replace('.hdf5',''),show_shapes=True)
     print('-'*30)
