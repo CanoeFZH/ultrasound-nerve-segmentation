@@ -25,7 +25,7 @@ from keras.models import Model
 from keras.layers import Input, merge, Convolution2D, MaxPooling2D, UpSampling2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import PReLU,LeakyReLU,ELU,SReLU
-from keras.optimizers import Adam,Nadam
+from keras.optimizers import Adam,SGD#,Nadam
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as K
@@ -130,8 +130,9 @@ def get_unet():
     conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
     
     model = Model(input=inputs, output=conv10)
-    nadam = Nadam()
-    model.compile(optimizer=nadam, loss=dice_coef_loss, metrics=[dice_coef])
+    # nadam = Nadam()
+    sgd = SGD(lr=0.01, decay=0.0001, momentum=0.9, nesterov=True)
+    model.compile(optimizer=sgd, loss=dice_coef_loss, metrics=[dice_coef])
     
     return model
 
