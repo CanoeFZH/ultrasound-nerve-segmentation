@@ -31,6 +31,7 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as K
 from keras.utils.visualize_util import plot
 from sklearn.cross_validation import train_test_split
+from sklearn.cross_validation import KFold,StratifiedKFold
 from data import load_train_data, load_test_data
 seed = 1024
 np.random.seed(seed)
@@ -56,7 +57,8 @@ def dice_coef(y_true, y_pred):
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
-
+def mask_not_blank(mask):
+    return sum(mask.flatten()) > 0
 
 def get_unet():
     inputs = Input((1, img_rows, img_cols))
