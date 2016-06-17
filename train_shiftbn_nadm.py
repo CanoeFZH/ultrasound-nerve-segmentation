@@ -131,7 +131,7 @@ def get_unet():
     
     model = Model(input=inputs, output=conv10)
     
-    model.compile(optimizer="nadm", loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer="nadam", loss=dice_coef_loss, metrics=[dice_coef])
     
     return model
 
@@ -230,13 +230,13 @@ def train_and_predict():
     print('Loading saved weights...')
     print('-'*30)
     model.load_weights('E:\\UltrasoundNerve\\'+model_name)
-    
+
     print('-'*30)
     print('Predicting masks on test data...')
     print('-'*30)
     imgs_mask_test = model.predict(imgs_test, verbose=1)
     np.save('imgs_mask_test.npy', imgs_mask_test)
-    
+
 
 if __name__ == '__main__':
     train_and_predict()
