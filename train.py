@@ -30,11 +30,11 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as K
 from sklearn.cross_validation import train_test_split
 from data import load_train_data, load_test_data
-seed = 1024+2
+seed = 1024+3
 np.random.seed(seed)
 
-img_rows = 64
-img_cols = 80
+img_rows = 64#*2
+img_cols = 80#*2
 
 smooth = 1.
 
@@ -128,10 +128,10 @@ def train_and_predict():
     print('Loading and preprocessing train data...')
     print('-'*30)
     imgs_train, imgs_mask_train = load_train_data()
-
+    
     imgs_train = preprocess(imgs_train)
     imgs_mask_train = preprocess(imgs_mask_train)
-
+    
     imgs_train = imgs_train.astype('float32')
     mean = np.mean(imgs_train)  # mean for data centering
     std = np.std(imgs_train)  # std for data normalization
@@ -148,22 +148,29 @@ def train_and_predict():
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\unet_seed_1026_epoch_50.hdf5', monitor='loss', save_best_only=True)
+    model_name = 'unet_seed_1024_epoch_40_no_aug_64_80.hdf5'
+    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='loss', save_best_only=True)
     
     print('-'*30)
     print('Fitting model...')
     print('-'*30)
-    augmentation=True
+    augmentation=False
     batch_size=32
-    nb_epoch=50
+    nb_epoch=40
     load_model=False
+    use_all_data = False
+    
+    if use_all_data:
+        imgs_train = np.concatenate((imgs_train,imgs_valid),axis=0)
+        imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_valid),axis=0)
     
     if load_model:
-        model.load_weights('E:\\UltrasoundNerve\\unet.hdf5')
+        model.load_weights(model_name)
     if not augmentation:
         model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
                   callbacks=[model_checkpoint],validation_data=[imgs_valid,imgs_mask_valid]
                   )
+        pass
     else:
         
         datagen = ImageDataGenerator(
@@ -201,7 +208,7 @@ def train_and_predict():
     print('-'*30)
     print('Loading saved weights...')
     print('-'*30)
-    model.load_weights('E:\\UltrasoundNerve\\unet.hdf5')
+    model.load_weights('E:\\UltrasoundNerve\\'+model_name)
 
     print('-'*30)
     print('Predicting masks on test data...')
