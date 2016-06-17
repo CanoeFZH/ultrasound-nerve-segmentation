@@ -131,7 +131,7 @@ def get_unet():
     
     model = Model(input=inputs, output=conv10)
     
-    model.compile(optimizer="nadam", loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer="Nadam", loss=dice_coef_loss, metrics=[dice_coef])
     
     return model
 
