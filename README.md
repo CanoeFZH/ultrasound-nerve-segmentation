@@ -3,7 +3,7 @@
 This tutorial shows how to use [Keras library](http://keras.io/) to build deep neural network for ultrasound image nerve segmentation.
 More info on this Kaggle competition can be found on [https://www.kaggle.com/c/ultrasound-nerve-segmentation](https://www.kaggle.com/c/ultrasound-nerve-segmentation).
 
-This deep neural network achieves **~0.57 score on the leaderboard** based on test images,
+This deep neural network achieves **~0.64 score on the leaderboard** based on test images,
 and can be a good staring point for further, more serious approaches.
 
 The architecture was inspired by [U-Net: Convolutional Networks for Biomedical Image Segmentation](http://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/).
@@ -19,7 +19,9 @@ This script just loads the images and saves them into NumPy binary format files 
 
 ### Pre-processing
 
-The images are not pre-processed in any way, except resizing to 64 x 80. Since the images are pretty noisy,
+The images are  pre-processed by resizing to 64 x 80.
+Also vertical, horizontal flip and rotation are performed as augmentation.
+Since the images are pretty noisy,
 I expect that some thoughtful pre-processing could yield better performance of the model.
 
 Output images (masks) are scaled to \[0, 1\] interval.
@@ -95,7 +97,7 @@ Running this script will create train and test images and save them to **.npy** 
 
 ### Train the model and generate masks for test images
 
-* Run ```python train.py``` to train the model.
+* Run ```python train_shiftbn_sgd_aug.py``` to train the model.
 
 Check out ```train_predict()``` to modify the number of iterations (epochs), batch size, etc.
 
