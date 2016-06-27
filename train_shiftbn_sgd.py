@@ -76,7 +76,7 @@ def get_unet():
     conv2 = SReLU()(conv2)
     conv2 = BatchNormalization(axis=1)(conv2)   
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-
+    
     conv3 = Convolution2D(128, 3, 3, border_mode='same')(pool2)
     conv3 = SReLU()(conv3)
     conv3 = Convolution2D(128, 3, 3, border_mode='same')(conv3)
@@ -133,12 +133,12 @@ def get_unet():
     
     model = Model(input=inputs, output=conv10)
     # sgd = sgd()
-    sgd = SGD(lr=0.01, decay=0.0001, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(optimizer=sgd, loss=dice_coef_loss, metrics=[dice_coef])
     
     return model
-
-
+    
+    
 def preprocess(imgs):
     imgs_p = np.ndarray((imgs.shape[0], imgs.shape[1], img_rows, img_cols), dtype=np.uint8)
     for i in range(imgs.shape[0]):
@@ -169,32 +169,45 @@ def train_and_predict():
 
     # X_train,X_test,y_train,y_test = train_test_split(imgs_train,imgs_mask_train,test_size=0.2,random_state=seed)
     
-    skf = StratifiedKFold(y_bin, n_folds=5, shuffle=True, random_state=seed)
+    skf = StratifiedKFold(y_bin, n_folds=10, shuffle=True, random_state=seed)
     for ind_tr, ind_te in skf:
         X_train = imgs_train[ind_tr]
         X_test = imgs_train[ind_te]
         y_train = imgs_mask_train[ind_tr]
         y_test = imgs_mask_train[ind_te]
         break
+
+    X_train_flip = X_train[:,:,:,::-1]
+    y_train_flip = y_train[:,:,:,::-1]
+    X_train = np.concatenate((X_train,X_train_flip),axis=0)
+    y_train = np.concatenate((y_train,y_train_flip),axis=0)
+
+
+    X_train_flip = X_train[:,:,::-1,:]
+    y_train_flip = y_train[:,:,::-1,:]
+    X_train = np.concatenate((X_train,X_train_flip),axis=0)
+    y_train = np.concatenate((y_train,y_train_flip),axis=0)
+    
+    
     imgs_train = X_train
     imgs_valid = X_test
     imgs_mask_train = y_train
     imgs_mask_valid = y_test
-
+    
     print('-'*30)
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_name = 'unet_seed_1024_epoch_30_no_aug_64_80_shiftbn_sgd.hdf5'
+    model_name = 'unet_seed_1024_epoch_20_aug_64_80_shiftbn_sgd_srelu_plus10.hdf5'
     model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='loss', save_best_only=True)
     plot(model, to_file='E:\\UltrasoundNerve\\%s.png'%model_name.replace('.hdf5',''),show_shapes=True)
     print('-'*30)
     print('Fitting model...')
     print('-'*30)
     augmentation=False
-    batch_size=32
-    nb_epoch=30
-    load_model=False
+    batch_size=128
+    nb_epoch=10
+    load_model=True
     use_all_data = False
     
     if use_all_data:
@@ -202,12 +215,12 @@ def train_and_predict():
         imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_valid),axis=0)
     
     if load_model:
-        model.load_weights(model_name)
+        model.load_weights('E:\\UltrasoundNerve\\'+model_name)
     if not augmentation:
-        model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
-                  callbacks=[model_checkpoint],
-                  validation_data=[imgs_valid,imgs_mask_valid]
-                  )
+        # model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
+        #           callbacks=[model_checkpoint],
+        #           validation_data=[imgs_valid,imgs_mask_valid]
+        #           )
         pass
     else:
         
@@ -238,7 +251,7 @@ def train_and_predict():
     print('-'*30)
     imgs_test, imgs_id_test = load_test_data()
     imgs_test = preprocess(imgs_test)
-
+    
     imgs_test = imgs_test.astype('float32')
     imgs_test -= mean
     imgs_test /= std

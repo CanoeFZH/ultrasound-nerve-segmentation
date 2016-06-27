@@ -32,6 +32,7 @@ from keras import backend as K
 from keras.utils.visualize_util import plot
 from sklearn.cross_validation import train_test_split
 from sklearn.cross_validation import KFold,StratifiedKFold
+from theano import tensor as T
 from data import load_train_data, load_test_data
 
 seed = 1024
@@ -55,6 +56,15 @@ def dice_coef(y_true, y_pred):
     y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection) / (K.sum(y_true_f) + K.sum(y_pred_f))
+
+
+# def dice_coef(y_true, y_pred):
+#     y_true_f = T.flatten(y_true)
+#     y_pred_f = T.flatten(y_pred)
+#     y_pred_f = T.ceil(y_pred_f)
+#     intersection = T.sum(y_true_f * y_pred_f)
+#     return (2. * intersection) / (T.sum(y_true_f) + T.sum(y_pred_f))
+
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
@@ -196,7 +206,7 @@ def train_and_predict():
     batch_size=32
     nb_epoch=30
     load_model=False
-    use_all_data = False
+    use_all_data = True
     
     if use_all_data:
         imgs_train = np.concatenate((imgs_train,imgs_valid),axis=0)

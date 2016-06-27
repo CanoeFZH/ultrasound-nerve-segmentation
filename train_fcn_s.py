@@ -91,26 +91,26 @@ def get_fcn():
     inputs = Input((1, img_rows, img_cols))
 
     conv1 = GaussianNoise(1.0)(inputs)
-    conv1 = Convolution2D(32, 5, 5, border_mode='same')(conv1)
+    conv1 = Convolution2D(32, 5,5, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
-    conv1 = Convolution2D(32, 5, 5, border_mode='same')(inputs)
-    conv1 = SReLU()(conv1)
-    conv1 = BatchNormalization(axis=1)(conv1)
-    conv1 = MaxPooling2D(pool_size=(2, 2))(conv1)
-
-    conv1 = Convolution2D(32, 5, 5, border_mode='same')(conv1)
-    conv1 = SReLU()(conv1)
-    conv1 = BatchNormalization(axis=1)(conv1)
-    conv1 = Convolution2D(32, 5, 5, border_mode='same')(inputs)
+    conv1 = Convolution2D(32, 5,5, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
     conv1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
-    conv1 = Convolution2D(32, 5, 5, border_mode='same')(conv1)
+    conv1 = Convolution2D(32, 5,5, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
-    conv1 = Convolution2D(32, 5, 5, border_mode='same')(inputs)
+    conv1 = Convolution2D(32, 5,5, border_mode='same')(conv1)
+    conv1 = SReLU()(conv1)
+    conv1 = BatchNormalization(axis=1)(conv1)
+    conv1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    conv1 = Convolution2D(32, 5,5, border_mode='same')(conv1)
+    conv1 = SReLU()(conv1)
+    conv1 = BatchNormalization(axis=1)(conv1)
+    conv1 = Convolution2D(32, 5,5, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
     conv1 = MaxPooling2D(pool_size=(2, 2))(conv1)
@@ -129,22 +129,35 @@ def get_fcn():
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
 
+    conv1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+    
     conv1 = Convolution2D(128, 1, 1, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
-    conv1 = MaxPooling2D(pool_size=(2, 2))(conv1)
-
+    
+    
     conv1 = UpSampling2D(size=(2, 2))(conv1)
     conv1 = Convolution2D(2, 3, 3, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
-
+    
     conv1 = UpSampling2D(size=(2, 2))(conv1)
     conv1 = Convolution2D(2, 3, 3, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
     conv1 = BatchNormalization(axis=1)(conv1)
-
-
+    
+    conv1 = UpSampling2D(size=(2, 2))(conv1)
+    conv1 = Convolution2D(2, 3, 3, border_mode='same')(conv1)
+    conv1 = SReLU()(conv1)
+    conv1 = BatchNormalization(axis=1)(conv1)
+    
+    
+    conv1 = UpSampling2D(size=(2, 2))(conv1)
+    conv1 = Convolution2D(2, 3, 3, border_mode='same')(conv1)
+    conv1 = SReLU()(conv1)
+    conv1 = BatchNormalization(axis=1)(conv1)
+    
+    
     conv1 = UpSampling2D(size=(2, 2))(conv1)
     conv1 = Convolution2D(2, 3, 3, border_mode='same')(conv1)
     conv1 = SReLU()(conv1)
@@ -190,9 +203,9 @@ def get_fcn():
 
     model = Model(input=inputs, output=conv5)
 
-    model.compile(optimizer="rmsprop", loss=dice_coef_loss, metrics=[dice_coef])
-    # sgd =SGD(lr=0.01,momentum=0.9,nesterov=True,decay=0.0005)
-    # model.compile(optimizer=sgd, loss=dice_coef_loss, metrics=[dice_coef])
+    # model.compile(optimizer="rmsprop", loss=dice_coef_loss, metrics=[dice_coef])
+    sgd =SGD(lr=0.01,momentum=0.9,nesterov=True,decay=0.0005)
+    model.compile(optimizer=sgd, loss=dice_coef_loss, metrics=[dice_coef])
 
     return model
 
@@ -227,7 +240,7 @@ def train_and_predict():
 
     X_train,X_test,y_train,y_test = train_test_split(imgs_train,imgs_mask_train,test_size=0.2,random_state=seed)
     
-    skf = StratifiedKFold(y_bin, n_folds=5, shuffle=True, random_state=seed)
+    skf = StratifiedKFold(y_bin, n_folds=10, shuffle=True, random_state=seed)
     for ind_tr, ind_te in skf:
         X_train = imgs_train[ind_tr]
         X_test = imgs_train[ind_te]
@@ -249,7 +262,7 @@ def train_and_predict():
     
     # plot(model, to_file='E:\\UltrasoundNerve\\fcn.png',show_shapes=True)
     model_name = 'fcn_s_seed_1024_epoch_30_no_aug_64_80.hdf5'
-    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='loss', save_best_only=True)
+    model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='valid_loss', save_best_only=True)
     plot(model, to_file='E:\\UltrasoundNerve\\%s.png'%model_name.replace('.hdf5',''),show_shapes=True)
     print('-'*30)
     print('Fitting model...')
@@ -257,9 +270,9 @@ def train_and_predict():
     augmentation=False
     batch_size=32
     nb_epoch=30
-    load_model=True
+    load_model=False
     use_all_data = False
-    random_flip_fold = 3
+    random_flip_fold = 0
 
 
     if use_all_data:

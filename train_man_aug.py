@@ -5,11 +5,11 @@ import numpy as np
 from keras.models import Model
 from keras.layers import Input, merge, Convolution2D, MaxPooling2D, UpSampling2D
 from keras.layers.normalization import BatchNormalization
-from keras.optimizers import Adam
+from keras.optimizers import Adam,SGD
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as K
-from sklearn.cross_validation import train_test_split
+from sklearn.cross_validation import train_test_split,StratifiedKFold
 from data import load_train_data, load_test_data
 seed = 1024
 np.random.seed(seed)
@@ -24,11 +24,15 @@ def dice_coef(y_true, y_pred):
     y_true_f = K.flatten(y_true)
     y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)
-    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+    return (2. * intersection) / (K.sum(y_true_f) + K.sum(y_pred_f))
 
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
+
+
+def mask_not_blank(mask):
+    return sum(mask.flatten()) > 0
 
 
 def get_unet():
@@ -91,8 +95,8 @@ def get_unet():
     conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
 
     model = Model(input=inputs, output=conv10)
-
-    model.compile(optimizer="rmsprop", loss=dice_coef_loss, metrics=[dice_coef])
+    sgd = SGD(lr=0.01, decay=0.0001, momentum=0.9, nesterov=True)
+    model.compile(optimizer=sgd, loss=dice_coef_loss, metrics=[dice_coef])
 
     return model
 
@@ -123,29 +127,44 @@ def train_and_predict():
     imgs_mask_train = imgs_mask_train.astype('float32')
     imgs_mask_train /= 255.  # scale masks to [0, 1]
     
-    imgs_train,imgs_valid,imgs_mask_train,imgs_mask_valid = train_test_split(imgs_train,imgs_mask_train,test_size=0.2,random_state=seed)
+    y_bin = np.array([mask_not_blank(mask) for mask in imgs_mask_train ])
+
+    X_train,X_test,y_train,y_test = train_test_split(imgs_train,imgs_mask_train,test_size=0.2,random_state=seed)
     
-    # horizontal flip train
-    imgs_train_flip = imgs_train[:,:,:,::-1]
-    imgs_mask_train_flip = imgs_mask_train
-    imgs_train = np.concatenate((imgs_train,imgs_train_flip),axis=0)
-    imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_train_flip),axis=0)
-    # vertical flip train
-    imgs_train_flip = imgs_train[:,:,::-1,:]
-    imgs_mask_train_flip = imgs_mask_train
-    imgs_train = np.concatenate((imgs_train,imgs_train_flip),axis=0)
-    imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_train_flip),axis=0)
+    skf = StratifiedKFold(y_bin, n_folds=10, shuffle=True, random_state=seed)
+    for ind_tr, ind_te in skf:
+        X_train = imgs_train[ind_tr]
+        X_test = imgs_train[ind_te]
+        
+        y_train = imgs_mask_train[ind_tr]
+        y_test = imgs_mask_train[ind_te]
+        break
+
+    X_train_flip = X_train[:,:,:,::-1]
+    y_train_flip = y_train
+    X_train = np.concatenate((X_train,X_train_flip),axis=0)
+    y_train = np.concatenate((y_train,y_train_flip),axis=0)
+
+    X_train_flip = X_train[:,:,::-1,:]
+    y_train_flip = y_train
+    X_train = np.concatenate((X_train,X_train_flip),axis=0)
+    y_train = np.concatenate((y_train,y_train_flip),axis=0)
+
+    imgs_train = X_train
+    imgs_valid = X_test
+    imgs_mask_train = y_train
+    imgs_mask_valid = y_test
     
     
     print ("imgs_train: %s,imgs_valid:%s"%(imgs_train.shape,imgs_valid.shape))
     print ("imgs_mask_train: %s,imgs_mask_valid:%s"%(imgs_mask_train.shape,imgs_mask_valid.shape))
-
-
+    
+    
     print('-'*30)
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_name = 'unet_15_epoch_man_augmentation_4fold.hdf5'
+    model_name = 'unet_50_epoch_man_augmentation_10fold.hdf5'
     model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='loss', save_best_only=True)
     
     print('-'*30)
@@ -153,9 +172,9 @@ def train_and_predict():
     print('-'*30)
     
     batch_size=128
-    nb_epoch=15
+    nb_epoch=10
     
-    load_model=False
+    load_model=True
     augmentation=False
     use_all_data = False
     if load_model:
@@ -178,11 +197,11 @@ def train_and_predict():
             imgs_train = np.concatenate((imgs_train,imgs_valid),axis=0)
             imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_valid),axis=0)
             
-        # model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
-        #           callbacks=[model_checkpoint],validation_data=[imgs_valid,imgs_mask_valid]
-        #           )
+        model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
+                  callbacks=[model_checkpoint],validation_data=[imgs_valid,imgs_mask_valid]
+                  )
     else:
-
+        
         datagen = ImageDataGenerator(
             featurewise_center=False,  # set input mean to 0 over the dataset
             samplewise_center=False,  # set each sample mean to 0
