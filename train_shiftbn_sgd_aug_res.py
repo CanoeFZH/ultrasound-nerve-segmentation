@@ -40,6 +40,10 @@ np.random.seed(seed)
 img_rows = 64#*2
 img_cols = 80#*2
 
+
+img_rows = 64#*2
+img_cols = 64#*2
+
 smooth = 1.
 
 
@@ -63,72 +67,119 @@ def mask_not_blank(mask):
 
 
 
+def build_block(input,filters,r,c, border_mode='same'):
+    x = input
+    
+    conv1 = BatchNormalization(axis=1)(x)
+    conv1 = Convolution2D(filters/2, 1, 1, border_mode=border_mode)(x)
+    conv1 = SReLU()(conv1)
+
+    conv1 = BatchNormalization(axis=1)(conv1)
+    conv1 = Convolution2D(filters/2, 3, 3, border_mode=border_mode)(x)
+    conv1 = SReLU()(conv1)
+    
+    conv1 = BatchNormalization(axis=1)(conv1) 
+    conv1 = Convolution2D(filters, r, c, border_mode=border_mode)(conv1)
+    conv1 = SReLU()(conv1)
+    
+    y = conv1
+
+    y = merge([x,y],mode="sum")
+    return y
+
 
 def get_unet():
     inputs = Input((1, img_rows, img_cols))
     conv1 = Convolution2D(32, 3, 3, border_mode='same')(inputs)
     conv1 = SReLU()(conv1)
-    conv1 = Convolution2D(32, 3, 3, border_mode='same')(conv1)
-    conv1 = SReLU()(conv1)
-    conv1 = BatchNormalization(axis=1)(conv1)  
+
+    conv1 = build_block(conv1,32,3,3)
+
+    # conv1 = Convolution2D(32, 3, 3, border_mode='same')(conv1)
+    # conv1 = SReLU()(conv1)
+    # conv1 = BatchNormalization(axis=1)(conv1)  
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
     
     
     conv2 = Convolution2D(64, 3, 3, border_mode='same')(pool1)
     conv2 = SReLU()(conv2)
-    conv2= Convolution2D(64, 3, 3, border_mode='same')(conv2)
-    conv2 = SReLU()(conv2)
-    conv2 = BatchNormalization(axis=1)(conv2)   
+
+    conv2 = build_block(conv2,64,3,3)
+
+    # conv2= Convolution2D(64, 3, 3, border_mode='same')(conv2)
+    # conv2 = SReLU()(conv2)
+    # conv2 = BatchNormalization(axis=1)(conv2)   
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
     
     conv3 = Convolution2D(128, 3, 3, border_mode='same')(pool2)
     conv3 = SReLU()(conv3)
-    conv3 = Convolution2D(128, 3, 3, border_mode='same')(conv3)
-    conv3 = SReLU()(conv3)
-    conv3 = BatchNormalization(axis=1)(conv3)
+
+    conv3 = build_block(conv3,128,3,3)
+
+    # conv3 = Convolution2D(128, 3, 3, border_mode='same')(conv3)
+    # conv3 = SReLU()(conv3)
+    # conv3 = BatchNormalization(axis=1)(conv3)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
     
     conv4 = Convolution2D(256, 3, 3, border_mode='same')(pool3)
     conv4 = SReLU()(conv4)
-    conv4 = Convolution2D(256, 3, 3, border_mode='same')(conv4)
-    conv4 = SReLU()(conv4)
-    conv4 = BatchNormalization(axis=1)(conv4)
+
+    conv4 = build_block(conv4,256,3,3)
+
+    # conv4 = Convolution2D(256, 3, 3, border_mode='same')(conv4)
+    # conv4 = SReLU()(conv4)
+    # conv4 = BatchNormalization(axis=1)(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
     
     conv5 = Convolution2D(512, 3, 3, border_mode='same')(pool4)
     conv5 = SReLU()(conv5)
-    conv5 = Convolution2D(512, 3, 3, border_mode='same')(conv5)
-    conv5 = SReLU()(conv5)
-    conv5 = BatchNormalization(axis=1)(conv5)   
+
+    conv5 = build_block(conv5,512,3,3)
+
+    # conv5 = Convolution2D(512, 3, 3, border_mode='same')(conv5)
+    # conv5 = SReLU()(conv5)
+    # conv5 = BatchNormalization(axis=1)(conv5)   
 
     
     up6 = merge([UpSampling2D(size=(2, 2))(conv5), conv4], mode='concat', concat_axis=1)
     conv6 = Convolution2D(256, 3, 3, border_mode='same')(up6) 
     conv6 = SReLU()(conv6)
-    conv6 = Convolution2D(256, 3, 3, border_mode='same')(conv6)
-    conv6 = SReLU()(conv6)
-    conv6 = BatchNormalization(axis=1)(conv6)  
+
+    conv6 = build_block(conv6,256,3,3)
+
+    # conv6 = Convolution2D(256, 3, 3, border_mode='same')(conv6)
+    # conv6 = SReLU()(conv6)
+    # conv6 = BatchNormalization(axis=1)(conv6)  
     
     up7 = merge([UpSampling2D(size=(2, 2))(conv6), conv3], mode='concat', concat_axis=1)
     conv7 = Convolution2D(128, 3, 3, border_mode='same')(up7) 
     conv7 = SReLU()(conv7)
-    conv7 = Convolution2D(128, 3, 3, border_mode='same')(conv7)
-    conv7 = SReLU()(conv7)
-    conv7 = BatchNormalization(axis=1)(conv7)   
+
+    conv7 = build_block(conv7,128,3,3)
+
+    # conv7 = Convolution2D(128, 3, 3, border_mode='same')(conv7)
+    # conv7 = SReLU()(conv7)
+    # conv7 = BatchNormalization(axis=1)(conv7)   
     
     up8 = merge([UpSampling2D(size=(2, 2))(conv7), conv2], mode='concat', concat_axis=1)
     conv8 = Convolution2D(64, 3, 3, border_mode='same')(up8)
     conv8 = SReLU()(conv8)
-    conv8 = Convolution2D(64, 3, 3, border_mode='same')(conv8)
-    conv8 = SReLU()(conv8)
-    conv8 = BatchNormalization(axis=1)(conv8) 
+
+    conv8 = build_block(conv8,64,3,3)
+
+    # conv8 = Convolution2D(64, 3, 3, border_mode='same')(conv8)
+    # conv8 = SReLU()(conv8)
+    # conv8 = BatchNormalization(axis=1)(conv8) 
     
     up9 = merge([UpSampling2D(size=(2, 2))(conv8), conv1], mode='concat', concat_axis=1)
     conv9 = Convolution2D(32, 3, 3, border_mode='same')(up9)
     conv9 = SReLU()(conv9)
-    conv9 = Convolution2D(32, 3, 3, border_mode='same')(conv9)
-    conv9 = SReLU()(conv9)
-    conv9 = BatchNormalization(axis=1)(conv9) 
+
+    conv9 = build_block(conv9,32,3,3)
+
+    # conv9 = Convolution2D(32, 3, 3, border_mode='same')(conv9)
+    # conv9 = SReLU()(conv9)
+    # conv9 = BatchNormalization(axis=1)(conv9) 
     
     '''
     output
@@ -212,6 +263,19 @@ def train_and_predict():
     y_train = np.concatenate((y_train,y_train_rotate),axis=0)
     print(X_train.shape,y_train.shape)
     
+    X_train_rotate = get_rotation(X_train,degree=22.5)
+    y_train_rotate  = get_rotation(y_train,degree=22.5)
+    X_train = np.concatenate((X_train,X_train_rotate),axis=0)
+    y_train = np.concatenate((y_train,y_train_rotate),axis=0)
+    print(X_train.shape,y_train.shape)
+
+
+    X_train_rotate = get_rotation(X_train,degree=11.25)
+    y_train_rotate  = get_rotation(y_train,degree=11.25)
+    X_train = np.concatenate((X_train,X_train_rotate),axis=0)
+    y_train = np.concatenate((y_train,y_train_rotate),axis=0)
+    print(X_train.shape,y_train.shape)
+
     X_train_flip = X_train[:,:,:,::-1]
     y_train_flip = y_train[:,:,:,::-1]
     X_train = np.concatenate((X_train,X_train_flip),axis=0)
@@ -234,7 +298,7 @@ def train_and_predict():
     print('Creating and compiling model...')
     print('-'*30)
     model = get_unet()
-    model_name = 'unet_seed_1024_epoch_20_aug_rotate_64_80_shiftbn_sgd_srelu_plus10.hdf5'
+    model_name = 'unet_seed_1024_epoch_30_batch_8_aug_rotate_64_64_shiftbn_sgd_srelu_no_res_plus10_morerotation.hdf5'
     model_checkpoint = ModelCheckpoint('E:\\UltrasoundNerve\\'+model_name, monitor='loss', save_best_only=True)
     plot(model, to_file='E:\\UltrasoundNerve\\%s.png'%model_name.replace('.hdf5',''),show_shapes=True)
     print('-'*30)
@@ -242,7 +306,7 @@ def train_and_predict():
     print('-'*30)
     augmentation=False
     batch_size=128
-    nb_epoch=5
+    nb_epoch=3
     load_model=True
     use_all_data = False
     
@@ -257,10 +321,10 @@ def train_and_predict():
     if load_model:
         model.load_weights('E:\\UltrasoundNerve\\'+model_name)
     if not augmentation:
-        # model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
-        #           callbacks=[model_checkpoint],
-        #           validation_data=[imgs_valid,imgs_mask_valid]
-        #           )
+        model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
+                  callbacks=[model_checkpoint],
+                  validation_data=[imgs_valid,imgs_mask_valid]
+                  )
         pass
     else:
         
