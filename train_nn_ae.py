@@ -40,8 +40,9 @@ seed = 1024
 np.random.seed(seed)
 
 img_rows = 64#*2
-img_cols = 80#*2
-
+img_cols = 64#*2
+bn_mode = 0
+use_hist = True
 
 smooth = 1.
 
@@ -82,73 +83,83 @@ def conv_filter(x):
 def get_unet(X):
     inputs = Input(shape = (X.shape[1],))
 
-    encoder1 = Dense(2048)(inputs)
+    encoder1 = Dense(4096)(inputs)
     encoder1 = SReLU()(encoder1)
-    encoder1= BatchNormalization()(encoder1)
-    encoder1 = Dropout(0.2)(encoder1)
+    encoder1= BatchNormalization(mode=bn_mode)(encoder1)
+    encoder1 = Dropout(0.5)(encoder1)
 
-    # encoder1 = Dense(2048)(encoder1)
-    # encoder1 = SReLU()(encoder1)
-    # encoder1= BatchNormalization()(encoder1)
-    # encoder1 = Dropout(0.2)(encoder1)
+    encoder1 = Dense(2048)(encoder1)
+    encoder1 = SReLU()(encoder1)
+    encoder1= BatchNormalization(mode=bn_mode)(encoder1)
+    encoder1 = Dropout(0.5)(encoder1)
 
     encoder2 = Dense(1024)(encoder1)
     encoder2 = SReLU()(encoder2)
-    encoder2 = BatchNormalization()(encoder2)
-    encoder2 = Dropout(0.2)(encoder2)
+    encoder2 = BatchNormalization(mode=bn_mode)(encoder2)
+    encoder2 = Dropout(0.5)(encoder2)
 
     # encoder2 = Dense(1024)(encoder2)
     # encoder2 = SReLU()(encoder2)
-    # encoder2 = BatchNormalization()(encoder2)
-    # encoder2 = Dropout(0.2)(encoder2)
+    # encoder2 = BatchNormalization(mode=bn_mode)(encoder2)
+    # encoder2 = Dropout(0.5)(encoder2)
 
-    encoder3 = Dense(512)(encoder2)
+    encoder3 = Dense(1024)(encoder2)
     encoder3 = SReLU()(encoder3)
-    encoder3 = BatchNormalization()(encoder3)
-    encoder3 = Dropout(0.2)(encoder3)
+    encoder3 = BatchNormalization(mode=bn_mode)(encoder3)
+    encoder3 = Dropout(0.5)(encoder3)
 
     # encoder3 = Dense(512)(encoder3)
     # encoder3 = SReLU()(encoder3)
-    # encoder3 = BatchNormalization()(encoder3)
-    # encoder3 = Dropout(0.2)(encoder3)
+    # encoder3 = BatchNormalization(mode=bn_mode)(encoder3)
+    # encoder3 = Dropout(0.5)(encoder3)
 
 
     encoder4 = Dense(1024)(encoder3)
     encoder4 = SReLU()(encoder4)
-    encoder4 = BatchNormalization()(encoder4)
-    encoder4 = Dropout(0.2)(encoder4)
+    encoder4 = BatchNormalization(mode=bn_mode)(encoder4)
+    encoder4 = Dropout(0.5)(encoder4)
 
     # encoder4 = Dense(1024)(encoder4)
     # encoder4 = SReLU()(encoder4)
-    # encoder4 = BatchNormalization()(encoder4)
-    # encoder4 = Dropout(0.2)(encoder4)
+    # encoder4 = BatchNormalization(mode=bn_mode)(encoder4)
+    # encoder4 = Dropout(0.5)(encoder4)
 
-    # encoder4 = merge([encoder2,encoder4],mode='concat')
-    # encoder4 = Dense(2048)(encoder4)
-    # encoder4 = SReLU()(encoder4)
-    # encoder4 = BatchNormalization()(encoder4)
-    # encoder4 = Dropout(0.2)(encoder4)
+    encoder4 = merge([encoder2,encoder4],mode='concat')
+    encoder4 = Dense(2048)(encoder4)
+    encoder4 = SReLU()(encoder4)
+    encoder4 = BatchNormalization(mode=bn_mode)(encoder4)
+    encoder4 = Dropout(0.5)(encoder4)
 
 
-    encoder5 = Dense(2048)(encoder4)
+    encoder5 = Dense(4096)(encoder4)
     encoder5 = SReLU()(encoder5)
-    encoder5 = BatchNormalization()(encoder5)
-    encoder5 = Dropout(0.2)(encoder5)
+    encoder5 = BatchNormalization(mode=bn_mode)(encoder5)
+    encoder5 = Dropout(0.5)(encoder5)
 
-    # encoder5 = Dense(2048)(encoder5)
-    # encoder5 = SReLU()(encoder5)
-    # encoder5 = BatchNormalization()(encoder5)
-    # encoder5 = Dropout(0.2)(encoder5)
+    l1 = Dense(2048)(encoder5)
+    l1 = SReLU()(l1)
+    l1 = BatchNormalization(mode=bn_mode)(l1)
+    l1 = Dropout(0.5)(l1)
+
+    l2 = Dense(2048)(encoder5)
+    l2 = SReLU()(l2)
+    l2 = BatchNormalization(mode=bn_mode)(l2)
+    l2 = Dropout(0.5)(l2)
 
     # encoder5 = merge([encoder1,encoder5],mode='concat')
     # encoder5 = Dense(2048)(encoder5)
     # encoder5 = SReLU()(encoder5)
-    # encoder5 = BatchNormalization()(encoder5)
-    # encoder5 = Dropout(0.2)(encoder5)
+    # encoder5 = BatchNormalization(mode=2)(encoder5)
+    # encoder5 = Dropout(0.5)(encoder5)
 
-    outputs = Dense(img_rows*img_cols, activation='sigmoid')(encoder5)
+    location_outputs = Dense(img_rows*img_cols, activation='sigmoid',name='location_outputs')(l1)
 
-    
+    # bin_outputs = Dense(1, activation='sigmoid',name='bin_outputs')(l2)
+
+    # outputs = [location_outputs,bin_outputs]
+    outputs = location_outputs
+
+
     model = Model(input=inputs, output=outputs)
     # sgd = sgd()
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
@@ -170,6 +181,18 @@ def histeq(image_array,image_bins=256):
     image2_array = np.interp(image_array.flatten(),bins[:-1],cdf)
     return image2_array.reshape(image_array.shape),cdf
 
+def clahe(img):
+    img = img[0]
+    # img = np.concatenate([img,img,img],axis=0).transpose(1,2,0)
+    # print(img.shape)
+    clahe = cv2.createCLAHE(clipLimit=5.0)
+    cl1 = clahe.apply(img)
+    # cl1 = np.dstack([cl1,cl1,cl1])
+    # plt.imshow(cl1,plt.cm.gray)
+    # plt.show()
+    cl1 = np.expand_dims(cl1,0)
+    # img = img[0,:,:]
+    return cl1
 
 def get_rotation(X,degree=45):
     new_X = []
@@ -267,11 +290,15 @@ def train_and_predict():
     
     imgs_train = preprocess(imgs_train)
     imgs_mask_train = preprocess(imgs_mask_train)
-    # imgs_train = np.array([ histeq(img)[0] for img in imgs_train])
+    if use_hist:
+        imgs_train = np.array([ clahe(img) for img in imgs_train])
+        # imgs_train = np.array([ histeq(img)[0] for img in imgs_train])
     print(imgs_train.shape)
     
 
     imgs_train = imgs_train.astype('float32')
+
+
     mean = np.mean(imgs_train)  # mean for data centering
     std = np.std(imgs_train)  # std for data normalization
     
@@ -294,24 +321,36 @@ def train_and_predict():
         break
     
     
-    # X_train_rotate = get_rotation(X_train)
-    # y_train_rotate  = get_rotation(y_train)
-    # X_train = np.concatenate((X_train,X_train_rotate),axis=0)
-    # y_train = np.concatenate((y_train,y_train_rotate),axis=0)
-    # print(X_train.shape,y_train.shape)
+    X_train_rotate = get_rotation(X_train)
+    y_train_rotate  = get_rotation(y_train)
+    X_train = np.concatenate((X_train,X_train_rotate),axis=0)
+    y_train = np.concatenate((y_train,y_train_rotate),axis=0)
+    print(X_train.shape,y_train.shape)
+    
+    X_train_rotate = get_rotation(X_train,degree=22.5)
+    y_train_rotate  = get_rotation(y_train,degree=22.5)
+    X_train = np.concatenate((X_train,X_train_rotate),axis=0)
+    y_train = np.concatenate((y_train,y_train_rotate),axis=0)
+    print(X_train.shape,y_train.shape)
+    
+    X_train_rotate = get_rotation(X_train,degree=11.25)
+    y_train_rotate  = get_rotation(y_train,degree=11.25)
+    X_train = np.concatenate((X_train,X_train_rotate),axis=0)
+    y_train = np.concatenate((y_train,y_train_rotate),axis=0)
+    print(X_train.shape,y_train.shape)
     
     X_train_flip = X_train[:,:,:,::-1]
     y_train_flip = y_train[:,:,:,::-1]
     X_train = np.concatenate((X_train,X_train_flip),axis=0)
     y_train = np.concatenate((y_train,y_train_flip),axis=0)
-
-
+    
+    
     X_train_flip = X_train[:,:,::-1,:]
     y_train_flip = y_train[:,:,::-1,:]
     X_train = np.concatenate((X_train,X_train_flip),axis=0)
     y_train = np.concatenate((y_train,y_train_flip),axis=0)
     
-
+    
     X_train= X_train.reshape(X_train.shape[0],img_rows*img_cols)
     X_test= X_test.reshape(X_test.shape[0],img_rows*img_cols)
     y_train= y_train.reshape(y_train.shape[0],img_rows*img_cols)
@@ -322,17 +361,22 @@ def train_and_predict():
     imgs_valid = X_test
     imgs_mask_train = y_train
     imgs_mask_valid = y_test
-    imgs_train_conv = np.array([ conv_filter(x) for x in imgs_train])
-    imgs_valid_conv = np.array([ conv_filter(x) for x in imgs_valid])
+    # imgs_train_conv = np.array([ conv_filter(x) for x in imgs_train])
+    # imgs_valid_conv = np.array([ conv_filter(x) for x in imgs_valid])
+    
+    
+    y_train_bin = np.array([mask_not_blank(mask) for mask in imgs_mask_train ]).astype(int)
+    print ('y_train_bin shape',y_train_bin.shape)
+    y_test_bin = np.array([mask_not_blank(mask) for mask in imgs_mask_valid ]).astype(int)
     # imgs_train = np.hstack([imgs_train,imgs_train_conv])
     # imgs_valid = np.hstack([imgs_valid,imgs_valid_conv])
-
-    imgs_train = imgs_train_conv
-    imgs_valid = imgs_valid_conv
+    
+    # imgs_train = imgs_train_conv
+    # imgs_valid = imgs_valid_conv
     print ("imgs_train: %s,imgs_valid:%s"%(imgs_train.shape,imgs_valid.shape))
     print ("imgs_mask_train: %s,imgs_mask_valid:%s"%(imgs_mask_train.shape,imgs_mask_valid.shape))
-
-
+    
+    
     print('-'*30)
     print('Creating and compiling model...')
     print('-'*30)
@@ -345,8 +389,8 @@ def train_and_predict():
     print('-'*30)
     augmentation=False
     batch_size=128
-    nb_epoch=50
-    load_model=False
+    nb_epoch=100
+    load_model=True
     use_all_data = False
     
     if use_all_data:
@@ -354,14 +398,23 @@ def train_and_predict():
         imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_valid),axis=0)
     
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(optimizer='rmsprop', loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=sgd, loss=dice_coef_loss, metrics=[dice_coef])
+    # model.compile(optimizer='rmsprop',
+    #       loss={'location_outputs': dice_coef_loss, 'bin_outputs': 'binary_crossentropy'},
+    #       loss_weights={'location_outputs': 1., 'bin_outputs': 1.}, metrics=['accuracy',dice_coef])
+    
     
     if load_model:
         model.load_weights('E:\\UltrasoundNerve\\'+model_name)
     if not augmentation:
+        # model.fit(imgs_train, [imgs_mask_train,y_train_bin], batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
+        #           callbacks=[model_checkpoint],
+        #           validation_data=(imgs_valid,[imgs_mask_valid,y_test_bin])
+        #           )
+        
         model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, shuffle=True,
                   callbacks=[model_checkpoint],
-                  validation_data=[imgs_valid,imgs_mask_valid]
+                  validation_data=(imgs_valid,imgs_mask_valid)
                   )
         pass
     else:
@@ -393,11 +446,14 @@ def train_and_predict():
     print('-'*30)
     imgs_test, imgs_id_test = load_test_data()
     imgs_test = preprocess(imgs_test)
+    if use_hist:
+        imgs_test = np.array([ clahe(img) for img in imgs_test])
+        # imgs_test = np.array([ histeq(img)[0] for img in imgs_test])
     imgs_test= imgs_test.reshape(imgs_test.shape[0],img_rows*img_cols)
-    imgs_test_conv = np.array([ conv_filter(x) for x in imgs_test])
+    # imgs_test_conv = np.array([ conv_filter(x) for x in imgs_test])
     # imgs_test = np.hstack([imgs_test,imgs_test_conv])
     
-    imgs_test = imgs_test_conv
+    # imgs_test = imgs_test_conv
     # imgs_test = np.array([ histeq(img)[0] for img in imgs_test])
     imgs_test = imgs_test.astype('float32')
     imgs_test -= mean
@@ -414,7 +470,7 @@ def train_and_predict():
     imgs_mask_test = model.predict(imgs_test, verbose=1)
     np.save('imgs_mask_test_nn.npy', imgs_mask_test)
     
-    y_preds = model.predict(imgs_valid)
+    y_preds = model.predict(imgs_valid)#[0]
     
     for x,y,y_p in zip(imgs_valid,imgs_mask_valid,y_preds):
         y = y.reshape(img_rows,img_cols)

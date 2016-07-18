@@ -229,7 +229,7 @@ class DilatedConvolution2D(Layer):
 
         # self.ishape = input_shape
         # self.output_shape = self.output_shape(input_shape)
-        print 'in build',self.output_shape
+        # print 'in build',self.output_shape
         if self.dim_ordering == 'th':
             stack_size = input_shape[1]
             self.W_shape = (self.nb_filter, stack_size, self.nb_row, self.nb_col)

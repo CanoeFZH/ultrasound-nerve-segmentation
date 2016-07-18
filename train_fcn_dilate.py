@@ -157,12 +157,12 @@ def train_and_predict():
     # y_train_flip = y_train
     # X_train = np.concatenate((X_train,X_train_flip),axis=0)
     # y_train = np.concatenate((y_train,y_train_flip),axis=0)
-
+    
     imgs_train = X_train
     imgs_valid = X_test
     imgs_mask_train = y_train
     imgs_mask_valid = y_test
-
+    
     print('-'*30)
     print('Creating and compiling model...')
     print('-'*30)
@@ -182,9 +182,9 @@ def train_and_predict():
     use_all_data = False
     
     
-
-
-
+    
+    
+    
     if use_all_data:
         imgs_train = np.concatenate((imgs_train,imgs_valid),axis=0)
         imgs_mask_train = np.concatenate((imgs_mask_train,imgs_mask_valid),axis=0)
