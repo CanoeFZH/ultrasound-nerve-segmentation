@@ -1,24 +1,4 @@
 from __future__ import print_function
-
-
-'''
-seed = 1024,10 epoch
-seed = 1024+1,40 epoch
-
-datagen = ImageDataGenerator(
-            featurewise_center=False,  # set input mean to 0 over the dataset
-            samplewise_center=False,  # set each sample mean to 0
-            featurewise_std_normalization=False,  # divide inputs by std of the dataset
-            samplewise_std_normalization=False,  # divide each input by its std
-            zca_whitening=False,  # apply ZCA whitening
-            rotation_range=45,  # randomly rotate images in the range (degrees, 0 to 180)
-            width_shift_range=0.0,  # randomly shift images horizontally (fraction of total width)
-            height_shift_range=0.0, # randomly shift images vertically (fraction of total height)
-            horizontal_flip=True,  # randomly flip images
-            vertical_flip=False)
-
-
-'''
 import pylab as plt
 import cv2
 import time
@@ -40,9 +20,6 @@ from theano import tensor as T
 import theano
 seed = 1024
 np.random.seed(seed)
-
-img_rows = 64#*2
-img_cols = 80#*2
 
 
 img_rows = 64#*2
@@ -69,16 +46,7 @@ def get_rotation(X,degree=45):
     M = cv2.getRotationMatrix2D(center,45,1.0)
     for image in X:
         image = np.dstack([image[0,:,:],image[0,:,:],image[0,:,:]])
-        # print(image.shape)
         rotated = cv2.warpAffine(image,M,(img_cols,img_rows))
-        # print(rotated.shape)
-        # print('origin')
-        # plt.imshow(image,plt.cm.gray)
-        # plt.show()
-        # print('rotate')
-        # plt.imshow(rotated,plt.cm.gray)
-        # plt.show()
-
         rotated = rotated[:,:,0]
         new_X.append(rotated)
 
@@ -319,14 +287,14 @@ def process_data():
     X_train = np.concatenate((X_train,X_train_rotate),axis=0)
     y_train = np.concatenate((y_train,y_train_rotate),axis=0)
     print(X_train.shape,y_train.shape)
-
-
+    
+    
     # X_train_rotate = get_rotation(X_train,degree=11.25)
     # y_train_rotate  = get_rotation(y_train,degree=11.25)
     # X_train = np.concatenate((X_train,X_train_rotate),axis=0)
     # y_train = np.concatenate((y_train,y_train_rotate),axis=0)
     # print(X_train.shape,y_train.shape)
-
+    
     X_train_flip = X_train[:,:,:,::-1]
     y_train_flip = y_train[:,:,:,::-1]
     X_train = np.concatenate((X_train,X_train_flip),axis=0)
@@ -344,7 +312,7 @@ def process_data():
     imgs_valid = X_test
     imgs_mask_train = y_train
     imgs_mask_valid = y_test
-
+    
     imgs_train = lasagne.utils.floatX(imgs_train)
     imgs_valid = lasagne.utils.floatX(imgs_valid)
 
@@ -388,7 +356,7 @@ def train_lasagne():
     prediction = lasagne.layers.get_output(network)
     # loss = lasagne.objectives.binary_crossentropy(prediction, target_var)
     # loss = loss.mean()
-
+    
     loss = -lasagne_dice(prediction, target_var)
     loss = loss.mean()
     # We could add some weight decay as well here, see lasagne.regularization.
@@ -398,8 +366,8 @@ def train_lasagne():
     params = lasagne.layers.get_all_params(network, trainable=True)
     updates = lasagne.updates.nesterov_momentum(
             loss, params, learning_rate=0.01, momentum=0.9)
-
-
+    
+    
     # Create a loss expression for validation/testing. The crucial difference
     # here is that we do a deterministic forward pass through the network,
     # disabling dropout layers.
@@ -467,7 +435,7 @@ def train_lasagne():
         img = np.array([img])
         imgs_mask_test.append(pred_fn(img))
     imgs_mask_test = np.concatenate(imgs_mask_test,axis=0)
-
+    
     print("prediction shape",imgs_mask_test.shape)
     np.save('imgs_mask_test.npy', imgs_mask_test)
     print("prediction saved")
